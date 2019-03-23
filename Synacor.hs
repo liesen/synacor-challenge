@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns #-}
 import Control.Monad
 import Data.Array
 import Data.Binary
@@ -108,30 +109,30 @@ step m@Machine{..} =
                  | v < 32776 = reg ! (fromIntegral v - 32768)
                  | otherwise = error "numbers 32776..65535 are invalid"
 
--- Size of an op
+-- Size in bytes of an op
 size = \case
-    Halt -> 1
-    Set _ _ -> 3
-    Push _ -> 2
-    Pop _ -> 2
-    Eq _ _ _ -> 4
-    Gt _ _ _ -> 4
-    Jmp _ -> 2
-    Jt _ _ -> 3
-    Jf _ _ -> 3
-    Add _ _ _ -> 4
-    Mult _ _ _ -> 4
-    Mod _ _ _ -> 4
-    And _ _ _ -> 4
-    Or _ _ _ -> 4
-    Not _ _ -> 3
-    Rmem _ _ -> 3
-    Wmem _ _ -> 3
-    Call _ -> 2
-    Ret _ -> 2
-    Out _ -> 2
-    In _ -> 2
-    Noop -> 1
+    Halt -> 2
+    Set _ _ -> 6
+    Push _ -> 4
+    Pop _ -> 4
+    Eq _ _ _ -> 8
+    Gt _ _ _ -> 8
+    Jmp _ -> 4
+    Jt _ _ -> 6
+    Jf _ _ -> 6
+    Add _ _ _ -> 8
+    Mult _ _ _ -> 8
+    Mod _ _ _ -> 8
+    And _ _ _ -> 8
+    Or _ _ _ -> 8
+    Not _ _ -> 6
+    Rmem _ _ -> 6
+    Wmem _ _ -> 6
+    Call _ -> 4
+    Ret _ -> 4
+    Out _ -> 4
+    In _ -> 4
+    Noop -> 2
 
 main = do
     mem <- L.readFile "challenge.bin"
