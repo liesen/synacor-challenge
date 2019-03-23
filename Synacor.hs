@@ -73,7 +73,8 @@ instance Binary Op where
         where
             g = getWord16le
 
-a = runPut $ mapM_ putWord16le [9,32768,32769,4,19,32768]
+-- Test input
+testinput = runPut $ mapM_ putWord16le [9,32768,32769,4,19,32768]
 
 step :: Machine -> Machine
 step m@Machine{..} = 
@@ -134,7 +135,7 @@ size = \case
 
 main = do
     mem <- L.readFile "challenge.bin"
-    let mem = b
+    let mem = testinput
     let reg = listArray (0, 7) (replicate 8 0)
         stack = []
         pc = 0
