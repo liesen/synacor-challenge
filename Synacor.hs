@@ -91,7 +91,10 @@ step m@Machine{..} =
         Jmp a -> error "not implemented"
         Jt a b -> error "not implemented"
         Jf a b -> error "not implemented"
-        Add a b c -> error "not implemented"
+        Add (lookup -> a) (lookup -> b) (lookup -> c) ->
+            m{reg = reg // [(fromIntegral a, (b + c) `mod` 32768)],
+              pc = pc + sz
+             }
         Mult a b c -> error "not implemented"
         Mod a b c -> error "not implemented"
         And a b c -> error "not implemented"
