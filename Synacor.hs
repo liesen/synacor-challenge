@@ -133,7 +133,10 @@ step debugFlag m@Machine{..} =
         --   stores into <a> the bitwise or of <b> and <c>
         Or (r -> a) (v -> b) (v -> c) ->
             Just (m{reg = reg // [(a, b .|. c)], pc = pc + sz}, [])
-        Not a b -> error $ show op ++ " not implemented"
+        -- not: 14 a b
+        --   stores 15-bit bitwise inverse of <b> in <a>
+        Not (r -> a) (v -> b) ->
+            Just (m{reg = reg // [(a, complement b .&. 32767)], pc = pc + sz}, [])
         Rmem a b -> error $ show op ++ " not implemented"
         Wmem a b -> error $ show op ++ " not implemented"
         Call (v -> a) ->
