@@ -91,7 +91,10 @@ step debugFlag m@Machine{..} =
                 Just (m{reg = reg // [(a, b)], pc = pc + sz}, [])
         Push a -> error $ show op ++ " not implemented"
         Pop a -> error $ show op ++ " not implemented"
-        Eq a b c -> error $ show op ++ " not implemented"
+        -- eq: 4 a b c
+        --   set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
+        Eq (r -> a) (v -> b) (v -> c) ->
+            Just (m{reg = reg // [(a, if b == c then 1 else 0)], pc = pc + sz}, [])
         Gt a b c -> error $ show op ++ " not implemented"
         Jmp (v -> a) -> Just (m{pc = a * 2}, [])
         -- jt: 7 a b
