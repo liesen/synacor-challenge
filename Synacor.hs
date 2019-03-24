@@ -6,6 +6,7 @@ import Data.Array
 import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
+import Data.Bits
 import qualified Data.ByteString.Lazy as L
 import Data.Char
 import Debug.Trace
@@ -120,12 +121,18 @@ step debugFlag m@Machine{..} =
             debug (concat ["<a> is zero, jumping to ", show b]) $
                 Just (m{pc = b * 2}, [])
         Jf (v -> a) _ -> Just (m{pc = pc + sz}, [])
-        Add (v -> a) (v -> b) (v -> c) ->
+        Add (r -> a) (v -> b) (v -> c) ->
             Just (m{reg = reg // [(a, (b + c) `mod` 32768)], pc = pc + sz}, [])
         Mult a b c -> error $ show op ++ " not implemented"
         Mod a b c -> error $ show op ++ " not implemented"
-        And a b c -> error $ show op ++ " not implemented"
-        Or a b c -> error $ show op ++ " not implemented"
+        -- and: 12 a b c
+        --   stores into <a> the bitwise and of <b> and <c>
+        And (r -> a) (v -> b) (v -> c) ->
+            Just (m{reg = reg // [(a, b .&. c)], pc = pc + sz}, [])
+        -- or: 13 a b c
+        --   stores into <a> the bitwise or of <b> and <c>
+        Or (r -> a) (v -> b) (v -> c) ->
+            Just (m{reg = reg // [(a, b .|. c)], pc = pc + sz}, [])
         Not a b -> error $ show op ++ " not implemented"
         Rmem a b -> error $ show op ++ " not implemented"
         Wmem a b -> error $ show op ++ " not implemented"
