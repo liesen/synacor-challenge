@@ -121,10 +121,18 @@ step debugFlag m@Machine{..} =
             debug (concat ["<a> is zero, jumping to ", show b]) $
                 Just (m{pc = b * 2}, [])
         Jf (v -> a) _ -> Just (m{pc = pc + sz}, [])
+        -- add: 9 a b c
+        --   assign into <a> the sum of <b> and <c> (modulo 32768)
         Add (r -> a) (v -> b) (v -> c) ->
             Just (m{reg = reg // [(a, (b + c) `mod` 32768)], pc = pc + sz}, [])
-        Mult a b c -> error $ show op ++ " not implemented"
-        Mod a b c -> error $ show op ++ " not implemented"
+        -- mult: 10 a b c
+        --   store into <a> the product of <b> and <c> (modulo 32768)
+        Mult (r -> a) (v -> b) (v -> c) ->
+            Just (m{reg = reg // [(a, (b * c) `mod` 32768)], pc = pc + sz}, [])
+        -- mod: 11 a b c
+        --   store into <a> the remainder of <b> divided by <c>
+        Mod (r -> a) (v -> b) (v -> c) ->
+            Just (m{reg = reg // [(a, b `mod` c)], pc = pc + sz}, [])
         -- and: 12 a b c
         --   stores into <a> the bitwise and of <b> and <c>
         And (r -> a) (v -> b) (v -> c) ->
