@@ -89,8 +89,12 @@ step debugFlag m@Machine{..} =
         Set (r -> a) (v -> b) ->
             debug (concat ["set r", show a, " = ", show b]) $
                 Just (m{reg = reg // [(a, b)], pc = pc + sz}, [])
-        Push a -> error $ show op ++ " not implemented"
-        Pop a -> error $ show op ++ " not implemented"
+        -- push: 2 a
+        --   push <a> onto the stack
+        Push (v -> a) -> Just (m{stack = a:stack, pc = pc + sz}, [])
+        -- pop: 3 a
+        --   remove the top element from the stack and write it into <a>; empty stack = error
+        Pop (r -> a) -> Just (m{stack = tail stack, reg = reg // [(a, head stack)], pc = pc + sz}, [])
         -- eq: 4 a b c
         --   set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
         Eq (r -> a) (v -> b) (v -> c) ->
