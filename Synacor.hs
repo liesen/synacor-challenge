@@ -7,14 +7,15 @@ import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
 import qualified Data.ByteString.Lazy as L
+import Data.Char
 import Debug.Trace
 
 
 data Machine = Machine
     { mem :: L.ByteString
-    , reg :: Array Int Word16
+    , reg :: Array Word16 Word16
     , stack :: [Word16]
-    , pc :: Int
+    , pc :: Word16
     }
 
 instance Show Machine where
@@ -39,7 +40,7 @@ data Op
     | Rmem Word16 Word16
     | Wmem Word16 Word16
     | Call Word16
-    | Ret Word16
+    | Ret
     | Out Word16
     | In Word16
     | Noop
@@ -66,51 +67,68 @@ instance Binary Op where
             15 -> Rmem <$> g <*> g
             16 -> Wmem <$> g <*> g
             17 -> Call <$> g
-            18 -> Ret <$> g
+            18 -> pure Ret
             19 -> Out <$> g
             20 -> In <$> g
             21 -> pure Noop
-            x -> error $ "unknown op: " ++ show x
+            x -> fail ("unknown op: " ++ show x)
         where
             g = getWord16le
 
 -- Test input
-testinput = runPut $ mapM_ putWord16le [9,32768,32769,4,19,32768]
+testinput = runPut $ mapM_ putWord16le [9,32768,32769,4,19,32768,0]
 
-step :: Machine -> Machine
-step m@Machine{..} = 
+step :: Bool -> Machine -> Maybe (Machine, [Char])
+step debugFlag m@Machine{..} = 
+    -- let op = ops ! fromIntegral pc
+    --     sz = size op
     let op = runGet get (L.drop (fromIntegral pc) mem)
-        sz = size op in
-    traceShow op $ case op of
-        Halt -> error "not implemented"
-        Set a b -> error "not implemented"
-        Push a -> error "not implemented"
-        Pop a -> error "not implemented"
-        Eq a b c -> error "not implemented"
-        Gt a b c -> error "not implemented"
-        Jmp a -> error "not implemented"
-        Jt a b -> error "not implemented"
-        Jf a b -> error "not implemented"
+        sz = size op
+    in debugShow (m, op) $ case op of
+        Halt -> Nothing
+        Set (lookup -> a) (lookup -> b) ->
+            Just (m{reg = reg // [(fromIntegral a, b)], pc = pc + sz}, [])
+        Push a -> error $ show op ++ " not implemented"
+        Pop a -> error $ show op ++ " not implemented"
+        Eq a b c -> error $ show op ++ " not implemented"
+        Gt a b c -> error $ show op ++ " not implemented"
+        Jmp (lookup -> a) ->
+            Just (m{pc = a * 2}, [])
+        Jt a b -> error $ show op ++ " not implemented"
+        Jf a b -> error $ show op ++ " not implemented"
         Add (lookup -> a) (lookup -> b) (lookup -> c) ->
-            m{reg = reg // [(fromIntegral a, (b + c) `mod` 32768)],
-              pc = pc + sz
-             }
-        Mult a b c -> error "not implemented"
-        Mod a b c -> error "not implemented"
-        And a b c -> error "not implemented"
-        Or a b c -> error "not implemented"
-        Not a b -> error "not implemented"
-        Rmem a b -> error "not implemented"
-        Wmem a b -> error "not implemented"
-        Call a -> error "not implemented"
-        Ret a -> error "not implemented"
-        Out a -> error "not implemented"
-        In a -> error "not implemented"
-        Noop -> m {pc = pc + sz}
+            Just (m{reg = reg // [(a, (b + c) `mod` 32768)], pc = pc + sz}, [])
+        Mult a b c -> error $ show op ++ " not implemented"
+        Mod a b c -> error $ show op ++ " not implemented"
+        And a b c -> error $ show op ++ " not implemented"
+        Or a b c -> error $ show op ++ " not implemented"
+        Not a b -> error $ show op ++ " not implemented"
+        Rmem a b -> error $ show op ++ " not implemented"
+        Wmem a b -> error $ show op ++ " not implemented"
+        Call (lookup -> a) ->
+            Just (m{stack = (pc + sz):stack, pc = a}, [])
+        Ret -> error $ show op ++ " not implemented"
+        Out (chr . fromIntegral . lookup -> a) ->
+            Just (m{pc = pc + sz}, [a])
+        In a -> error $ show op ++ " not implemented"
+        Noop -> Just (m{pc = pc + sz}, [])
     where
         lookup v | v < 32768 = v
                  | v < 32776 = reg ! (fromIntegral v - 32768)
                  | otherwise = error "numbers 32776..65535 are invalid"
+
+        debug :: String -> a -> a
+        debug string expr
+            | debugFlag = trace string expr
+            | otherwise = expr
+
+        debugShow :: Show a => a -> b -> b
+        debugShow = debug . show
+
+run debugFlag m = case step debugFlag m of
+            Nothing -> return m
+            Just (m', s) -> do putStr s
+                               run debugFlag m'
 
 -- Size in bytes of an op
 size = \case
@@ -132,19 +150,18 @@ size = \case
     Rmem _ _ -> 6
     Wmem _ _ -> 6
     Call _ -> 4
-    Ret _ -> 4
+    Ret -> 2
     Out _ -> 4
     In _ -> 4
     Noop -> 2
 
 main = do
     mem <- L.readFile "challenge.bin"
-    let mem = testinput
+    -- let mem = testinput
     let reg = listArray (0, 7) (replicate 8 0)
         stack = []
         pc = 0
     let m = Machine{..}
     print m
-    print $ step m
-    print $ step $ step m
-    print $ step $ step $ step m
+    print $ step True m
+    run True m
