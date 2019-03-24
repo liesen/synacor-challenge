@@ -85,7 +85,11 @@ step debugFlag m@Machine{..} =
     let op = runGet get (L.drop (fromIntegral pc) mem)
         sz = size op
     in debugShow (m, op) $ case op of
+        -- halt: 0
+        --   stop execution and terminate the program
         Halt -> Nothing
+        -- set: 1 a b
+        --   set register <a> to the value of <b>
         Set (r -> a) (v -> b) ->
             debug (concat ["set r", show a, " = ", show b]) $
                 Just (m{reg = reg // [(a, b)], pc = pc + sz}, [])
@@ -103,6 +107,8 @@ step debugFlag m@Machine{..} =
         --   set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
         Gt (r -> a) (v -> b) (v -> c) ->
             Just (m{reg = reg // [(a, if b > c then 1 else 0)], pc = pc + sz}, [])
+        -- jmp: 6 a
+        --   jump to <a>
         Jmp (v -> a) -> Just (m{pc = a * 2}, [])
         -- jt: 7 a b
         --   if <a> is nonzero, jump to <b>
