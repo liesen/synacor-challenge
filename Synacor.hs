@@ -86,17 +86,25 @@ step debugFlag m@Machine{..} =
         sz = size op
     in debugShow (m, op) $ case op of
         Halt -> Nothing
-        Set (lookup -> a) (lookup -> b) ->
-            Just (m{reg = reg // [(fromIntegral a, b)], pc = pc + sz}, [])
+        Set (r -> a) (v -> b) ->
+            debug (concat ["set r", show a, " = ", show b]) $
+                Just (m{reg = reg // [(a, b)], pc = pc + sz}, [])
         Push a -> error $ show op ++ " not implemented"
         Pop a -> error $ show op ++ " not implemented"
         Eq a b c -> error $ show op ++ " not implemented"
         Gt a b c -> error $ show op ++ " not implemented"
-        Jmp (lookup -> a) ->
-            Just (m{pc = a * 2}, [])
-        Jt a b -> error $ show op ++ " not implemented"
-        Jf a b -> error $ show op ++ " not implemented"
-        Add (lookup -> a) (lookup -> b) (lookup -> c) ->
+        Jmp (v -> a) -> Just (m{pc = a * 2}, [])
+        -- jt: 7 a b
+        --   if <a> is nonzero, jump to <b>
+        Jt (v -> 0) _ -> Just (m{pc = pc + sz}, [])
+        Jt (v -> a) (v -> b) -> Just (m{pc = b * 2}, [])
+        -- jf: 8 a b
+        --   if <a> is zero, jump to <b>
+        Jf (v -> 0) (v -> b) ->
+            debug (concat ["<a> is zero, jumping to ", show b]) $
+                Just (m{pc = b * 2}, [])
+        Jf (v -> a) _ -> Just (m{pc = pc + sz}, [])
+        Add (v -> a) (v -> b) (v -> c) ->
             Just (m{reg = reg // [(a, (b + c) `mod` 32768)], pc = pc + sz}, [])
         Mult a b c -> error $ show op ++ " not implemented"
         Mod a b c -> error $ show op ++ " not implemented"
@@ -105,17 +113,23 @@ step debugFlag m@Machine{..} =
         Not a b -> error $ show op ++ " not implemented"
         Rmem a b -> error $ show op ++ " not implemented"
         Wmem a b -> error $ show op ++ " not implemented"
-        Call (lookup -> a) ->
+        Call (v -> a) ->
             Just (m{stack = (pc + sz):stack, pc = a}, [])
         Ret -> error $ show op ++ " not implemented"
-        Out (chr . fromIntegral . lookup -> a) ->
+        Out (chr . fromIntegral . v -> a) ->
             Just (m{pc = pc + sz}, [a])
         In a -> error $ show op ++ " not implemented"
         Noop -> Just (m{pc = pc + sz}, [])
     where
-        lookup v | v < 32768 = v
-                 | v < 32776 = reg ! (fromIntegral v - 32768)
-                 | otherwise = error "numbers 32776..65535 are invalid"
+        r :: Word16 -> Word16
+        -- Register offset
+        r a = a - 32768
+
+        -- Literal value or from register
+        v :: Word16 -> Word16
+        v a | a < 32768 = a
+            | a < 32776 = reg ! r a
+            | otherwise = error "numbers 32776..65535 are invalid"
 
         debug :: String -> a -> a
         debug string expr
