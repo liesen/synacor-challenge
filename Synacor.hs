@@ -20,7 +20,7 @@ data Machine = Machine
     }
 
 instance Show Machine where
-    show Machine{..} = concat ["[", show reg, ",", show pc, "]"]
+    show Machine{..} = concat ["[", show pc, ",", show reg, ",", show (take 3 stack), "]"]
 
 data Op 
     = Halt
@@ -139,8 +139,10 @@ step debugFlag m@Machine{..} =
             Just (m{reg = reg // [(a, complement b .&. 32767)], pc = pc + sz}, [])
         Rmem a b -> error $ show op ++ " not implemented"
         Wmem a b -> error $ show op ++ " not implemented"
+        -- call: 17 a
+        --   write the address of the next instruction to the stack and jump to <a>
         Call (v -> a) ->
-            Just (m{stack = (pc + sz):stack, pc = a}, [])
+            debug "call" $ Just (m{stack = (pc + sz):stack, pc = a * 2}, [])
         Ret -> error $ show op ++ " not implemented"
         Out (chr . fromIntegral . v -> a) ->
             Just (m{pc = pc + sz}, [a])
