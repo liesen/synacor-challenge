@@ -99,7 +99,10 @@ step debugFlag m@Machine{..} =
         --   set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
         Eq (r -> a) (v -> b) (v -> c) ->
             Just (m{reg = reg // [(a, if b == c then 1 else 0)], pc = pc + sz}, [])
-        Gt a b c -> error $ show op ++ " not implemented"
+        -- gt: 5 a b c
+        --   set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
+        Gt (r -> a) (v -> b) (v -> c) ->
+            Just (m{reg = reg // [(a, if b > c then 1 else 0)], pc = pc + sz}, [])
         Jmp (v -> a) -> Just (m{pc = a * 2}, [])
         -- jt: 7 a b
         --   if <a> is nonzero, jump to <b>
