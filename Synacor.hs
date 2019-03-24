@@ -150,7 +150,7 @@ step debugFlag m@Machine{..} =
         -- call: 17 a
         --   write the address of the next instruction to the stack and jump to <a>
         Call (v -> a) ->
-            debug "call" $ Just (m{stack = (pc + sz):stack, pc = a * 2}, [])
+            debug "call" $ Just (m{stack = (pc + sz) `div` 2:stack, pc = a * 2}, [])
         Ret -> error $ show op ++ " not implemented"
         Out (chr . fromIntegral . v -> a) ->
             Just (m{pc = pc + sz}, [a])
