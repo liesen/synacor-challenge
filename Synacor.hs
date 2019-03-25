@@ -150,12 +150,20 @@ step debugFlag m@Machine{..} =
             Just (m{reg = reg // [(a, complement b .&. 32767)], pc = pc + sz}, [])
         -- rmem: 15 a b
         --   read memory at address <b> and write it to <a>
-        Rmem (x -> Reg a) (v -> b) ->
-            let b' = runGet getWord16le (L.drop (fromIntegral b * 2) mem)
-            in Just (m{reg = reg // [(a, b')], pc = pc + sz}, [])
+        Rmem (x -> Reg a) (x -> Lit b) ->
+            let b' = rmem b
+            in debug ("rmem(r:" ++ show a ++ "=" ++ show (reg ! a) ++ ",@" ++ show b ++ "=" ++ show b' ++ ")") $
+                Just (m{reg = reg // [(a, b')], pc = pc + sz}, [])
+        Rmem (x -> Reg a) (x -> Reg b) ->
+            let b' = rmem (reg ! b)
+            in debug ("rmem(r:" ++ show a ++ "=" ++ show (reg ! a) ++ ",@" ++ show b ++ "=" ++ show b' ++ ")") $
+                Just (m{reg = reg // [(a, b')], pc = pc + sz}, [])
         -- wmem: 16 a b
         --   write the value from <b> into memory at address <a>
-        Wmem (r -> a) (v -> b) -> error $ show op ++ " not implemented"
+        Wmem (x -> Reg a) (x -> Lit b) ->
+            let b' = b
+            in debug ("wmem(r:" ++ show a ++ "=" ++ show (reg ! a) ++ ",@" ++ show b ++ "=" ++ show b' ++ ")") $
+                Just (m{reg = reg // [(a, b')], pc = pc + sz}, [])
         -- call: 17 a
         --   write the address of the next instruction to the stack and jump to <a>
         Call (v -> a) ->
@@ -179,6 +187,8 @@ step debugFlag m@Machine{..} =
         -- Literal value or value from register
         v (x -> Lit a) = a
         v (x -> Reg a) = reg ! a
+
+        rmem a = runGet getWord16le (L.drop (fromIntegral a * 2) mem)
 
         debug :: String -> a -> a
         debug string expr
