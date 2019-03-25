@@ -79,6 +79,9 @@ instance Binary Op where
 -- Test input
 testinput = runPut $ mapM_ putWord16le [9,32768,32769,4,19,32768,0]
 
+data Val = Lit Word16
+         | Reg Word16
+
 step :: Bool -> Machine -> Maybe (Machine, [Char])
 step debugFlag m@Machine{..} = 
     -- let op = ops ! fromIntegral pc
@@ -145,8 +148,14 @@ step debugFlag m@Machine{..} =
         --   stores 15-bit bitwise inverse of <b> in <a>
         Not (r -> a) (v -> b) ->
             Just (m{reg = reg // [(a, complement b .&. 32767)], pc = pc + sz}, [])
-        Rmem a b -> error $ show op ++ " not implemented"
-        Wmem a b -> error $ show op ++ " not implemented"
+        -- rmem: 15 a b
+        --   read memory at address <b> and write it to <a>
+        Rmem (x -> Reg a) (v -> b) ->
+            let b' = runGet getWord16le (L.drop (fromIntegral b * 2) mem)
+            in Just (m{reg = reg // [(a, b')], pc = pc + sz}, [])
+        -- wmem: 16 a b
+        --   write the value from <b> into memory at address <a>
+        Wmem (r -> a) (v -> b) -> error $ show op ++ " not implemented"
         -- call: 17 a
         --   write the address of the next instruction to the stack and jump to <a>
         Call (v -> a) ->
@@ -157,15 +166,19 @@ step debugFlag m@Machine{..} =
         In a -> error $ show op ++ " not implemented"
         Noop -> Just (m{pc = pc + sz}, [])
     where
-        r :: Word16 -> Word16
-        -- Register offset
-        r a = a - 32768
-
         -- Literal value or from register
-        v :: Word16 -> Word16
-        v a | a < 32768 = a
-            | a < 32776 = reg ! r a
+        x :: Word16 -> Val
+        x a | a < 32768 = Lit a
+            | a < 32776 = Reg (a - 32768)
             | otherwise = error "numbers 32776..65535 are invalid"
+
+        -- Register offset
+        r :: Word16 -> Word16
+        r (x -> Reg a) = a
+
+        -- Literal value or value from register
+        v (x -> Lit a) = a
+        v (x -> Reg a) = reg ! a
 
         debug :: String -> a -> a
         debug string expr
