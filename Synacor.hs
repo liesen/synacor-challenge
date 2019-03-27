@@ -158,8 +158,9 @@ step debugFlag m@Machine{..} =
         -- ret: 18
         --   remove the top element from the stack and jump to it; empty stack = halt
         18 ->
-            let s:ss = stack
-            in Just (m{stack = ss, pc = s}, [])
+            case stack of
+                [] -> Nothing
+                a:ss -> Just (m{stack = ss, pc = a}, [])
         -- out: 19 a
         --   write the character represented by ascii code <a> to the terminal
         19 ->
