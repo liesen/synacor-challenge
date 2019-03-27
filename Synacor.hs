@@ -155,7 +155,11 @@ step debugFlag m@Machine{..} =
         17 ->
             let a = v (mem ! (pc + 1))
             in debug "call" $ Just (m{stack = (pc + 2):stack, pc = a}, [])
-        18 -> error "ret not implemented"
+        -- ret: 18
+        --   remove the top element from the stack and jump to it; empty stack = halt
+        18 ->
+            let s:ss = stack
+            in Just (m{stack = ss, pc = s}, [])
         -- out: 19 a
         --   write the character represented by ascii code <a> to the terminal
         19 ->
