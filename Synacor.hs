@@ -148,10 +148,9 @@ step debugFlag m@Machine{..} =
                 b = (mem ! (pc + 2))
             -- in debug (intercalate " " ["wmem", show a, show b]) $ Just (m{reg = reg // [(r a, mem ! b)], pc = pc + 3}, [])
             in debug (intercalate " " ["wmem", show a, show b]) $
-                case (x (v (mem ! (pc + 1))), x (mem ! (pc + 2))) of
-                    (Reg a, Reg b) -> Just (m{reg = reg // [(a, reg ! b)], pc = pc + 3}, [])
-                    (Reg a, Lit b) -> Just (m{reg = reg // [(a, b)], pc = pc + 3}, [])
-                    (Lit a, Lit b) -> Just (m{mem = mem // [(a, b)], pc = pc + 3}, [])
+                case (x (v (mem ! (pc + 1))), v (mem ! (pc + 2))) of
+                    (Reg a, b) -> Just (m{reg = reg // [(a, b)], pc = pc + 3}, [])
+                    (Lit a, b) -> Just (m{mem = mem // [(a, b)], pc = pc + 3}, [])
         -- call: 17 a
         --   write the address of the next instruction to the stack and jump to <a>
         17 ->
