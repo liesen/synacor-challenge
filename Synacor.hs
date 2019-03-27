@@ -82,14 +82,14 @@ step debugFlag m@Machine{..} =
         --   if <a> is nonzero, jump to <b>
         7 ->
             let a = v (mem ! (pc + 1))
-                b = if a /= 0 then v (mem ! (pc + 2)) else pc + 3
-            in Just (m{pc = b}, [])
+                b = v (mem ! (pc + 2))
+            in debug (intercalate " " ["jt", show a, show b]) $ Just (m{pc = if a /= 0 then b else pc + 3}, [])
         -- jf: 8 a b
         --   if <a> is zero, jump to <b>
         8 ->
             let a = v (mem ! (pc + 1))
-                b = if a == 0 then v (mem ! (pc + 2)) else pc + 3
-            in Just (m{pc = b}, [])
+                b = v (mem ! (pc + 2))
+            in debug (intercalate " " ["jf", show a, show b]) $ Just (m{pc = if a == 0 then b else pc + 3}, [])
         -- add: 9 a b c
         --   assign into <a> the sum of <b> and <c> (modulo 32768)
         9 ->
@@ -130,19 +130,28 @@ step debugFlag m@Machine{..} =
         14 ->
             let a = r (mem ! (pc + 1))
                 b = v (mem ! (pc + 2))
-            in Just (m{reg = reg // [(a, complement b .&. 32767)], pc = pc + 3}, [])
+            in debug (intercalate " " ["not", show a, show b]) $ Just (m{reg = reg // [(a, complement b .&. 32767)], pc = pc + 3}, [])
         -- rmem: 15 a b
         --   read memory at address <b> and write it to <a>
         15 ->
-            let Reg a = x (mem ! (pc + 1))
-                b = v (mem ! (pc + 2))
-            in debug (intercalate " " ["rmem", "@" ++ show a, "!" ++ show b ++ "=" ++ show (mem ! b)]) $ Just (m{reg = reg // [(a, mem ! b)], pc = pc + 3}, [])
+            let a = (mem ! (pc + 1))
+                b = (mem ! (pc + 2))
+            -- in debug (intercalate " " ["rmem", show a, show b]) $ Just (m{reg = reg // [(r a, mem ! (v b))], pc = pc + 3}, [])
+            --
+            in debug (intercalate " " ["rmem", show a, show b]) $ case (x (mem ! (pc + 1)), x (mem ! (pc + 2))) of
+                (Reg a, Reg b) -> Just (m{reg = reg // [(a, mem ! (reg ! b))], pc = pc + 3}, [])
+                (Reg a, Lit b) -> Just (m{reg = reg // [(a, mem ! b)], pc = pc + 3}, [])
         -- wmem: 16 a b
         --   write the value from <b> into memory at address <a>
         16 ->
-            let a = r (mem ! (pc + 1))
-                b = v (mem ! (pc + 2))
-            in debug (intercalate " " ["wmem", "@" ++ show a, show b]) $ Just (m{reg = reg // [(a, b)], pc = pc + 3}, [])
+            let a = (mem ! (pc + 1))
+                b = (mem ! (pc + 2))
+            -- in debug (intercalate " " ["wmem", show a, show b]) $ Just (m{reg = reg // [(r a, mem ! b)], pc = pc + 3}, [])
+            in debug (intercalate " " ["wmem", show a, show b]) $
+                case (x (v (mem ! (pc + 1))), x (mem ! (pc + 2))) of
+                    (Reg a, Reg b) -> Just (m{reg = reg // [(a, reg ! b)], pc = pc + 3}, [])
+                    (Reg a, Lit b) -> Just (m{reg = reg // [(a, b)], pc = pc + 3}, [])
+                    (Lit a, Lit b) -> Just (m{mem = mem // [(a, b)], pc = pc + 3}, [])
         -- call: 17 a
         --   write the address of the next instruction to the stack and jump to <a>
         17 ->
