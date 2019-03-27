@@ -138,9 +138,8 @@ step debugFlag m@Machine{..} =
                 b = (mem ! (pc + 2))
             -- in debug (intercalate " " ["rmem", show a, show b]) $ Just (m{reg = reg // [(r a, mem ! (v b))], pc = pc + 3}, [])
             --
-            in debug (intercalate " " ["rmem", show a, show b]) $ case (x (mem ! (pc + 1)), x (mem ! (pc + 2))) of
-                (Reg a, Reg b) -> Just (m{reg = reg // [(a, mem ! (reg ! b))], pc = pc + 3}, [])
-                (Reg a, Lit b) -> Just (m{reg = reg // [(a, mem ! b)], pc = pc + 3}, [])
+            in debug (intercalate " " ["rmem", show a, show b]) $ case (x (mem ! (pc + 1)), v (mem ! (pc + 2))) of
+                (Reg a, b) -> Just (m{reg = reg // [(a, mem ! b)], pc = pc + 3}, [])
         -- wmem: 16 a b
         --   write the value from <b> into memory at address <a>
         16 ->
