@@ -79,10 +79,10 @@ step m@Machine{..} =
             in return $ debug (intercalate " " ["push", show a]) $ Just (m{stack = v a:stack, pc = pc + 2})
         -- pop: 3 a
         --   remove the top element from the stack and write it into <a>; empty stack = error
-        Pop ->
+        Pop -> do
             let [a] = take 1 args
                 s:ss = stack
-            in return $ debug (intercalate " " ["pop", show a]) $ Just (m{stack = ss, reg = reg // [(a, s)], pc = pc + 2})
+            debugOp [a] $ return $ Just (m{stack = ss, reg = reg // [(r a, s)], pc = pc + 2})
         -- eq: 4 a b c
         --   set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
         Eq -> do
