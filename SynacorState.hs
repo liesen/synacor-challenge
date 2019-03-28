@@ -85,28 +85,31 @@ step m@Machine{..} =
             in return $ debug (intercalate " " ["pop", show a]) $ Just (m{stack = ss, reg = reg // [(a, s)], pc = pc + 2})
         -- eq: 4 a b c
         --   set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
-        Eq ->
+        Eq -> do
             let [a, b, c] = take 3 args
-            in return $ debug (intercalate " " ["eq", show a, show b, show c]) $ Just (m{reg = reg // [(r a, if v b == v c then 1 else 0)], pc = pc + 4})
+            debugOp [a, b, c] $
+                return $ Just (m{reg = reg // [(r a, if v b == v c then 1 else 0)], pc = pc + 4})
         -- gt: 5 a b c
         --   set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
-        Gt ->
+        Gt -> do
             let [a, b, c] = take 3 args
-            in return $ Just (m{reg = reg // [(r a, if v b > v c then 1 else 0)], pc = pc + 4})
+            debugOp [a, b, c] $
+                return $ Just (m{reg = reg // [(r a, if v b > v c then 1 else 0)], pc = pc + 4})
         -- jmp: 6 a
         --   jump to <a>
-        Jmp ->
+        Jmp -> do
             let [a] = take 1 args
-            in return $ debug (intercalate " " ["jmp", show a]) $ Just (m{pc = v a})
+            debugOp [a] $ return $ Just (m{pc = v a})
         -- jt: 7 a b
         --   if <a> is nonzero, jump to <b>
-        Jt -> let [a, b] = take 2 args
-             in return $ debug (intercalate " " ["jt", show a, show b]) $ Just (m{pc = if v a /= 0 then v b else pc + 3})
+        Jt -> do
+            let [a, b] = take 2 args
+            debugOp [a, b] $ return $ Just (m{pc = if v a /= 0 then v b else pc + 3})
         -- jf: 8 a b
         --   if <a> is zero, jump to <b>
-        Jf ->
+        Jf -> do
             let [a, b] = take 2 args
-            in return $ debug (intercalate " " ["jf", show a, show b]) $ Just (m{pc = if v a == 0 then v b else pc + 3})
+            debugOp [a, b] $ return $ Just (m{pc = if v a == 0 then v b else pc + 3})
         -- add: 9 a b c
         --   assign into <a> the sum of <b> and <c> (modulo 32768)
         Add -> do
@@ -155,6 +158,7 @@ step m@Machine{..} =
         Wmem -> do
             let [a, b] = take 2 args
             debugOp [a, b] $
+                -- return $ Just $ (write (v a) (v b)){pc = pc + 3}
                 return $ case (x (v a), v b) of
                     (Reg a, b) -> Just (m{reg = reg // [(a, b)], pc = pc + 3})
                     (Lit a, b) -> Just (m{mem = mem // [(a, b)], pc = pc + 3})
@@ -188,13 +192,13 @@ step m@Machine{..} =
         op = toEnum (fromIntegral opcode)
         args = map (mem !) [pc + 1..]
 
-        -- Literal value or from register
+        -- Literal value or register
         x :: Word16 -> Val
         x a | a < 32768 = Lit a
             | a < 32776 = Reg (a - 32768)
             | otherwise = error "numbers 32776..65535 are invalid"
 
-        -- Register offset
+        -- Register index
         r :: Word16 -> Word16
         r (x -> Reg a) = a
 
@@ -202,7 +206,14 @@ step m@Machine{..} =
         v (x -> Lit a) = a
         v (x -> Reg a) = reg ! a
 
-        rmem a = mem ! a
+        write a b
+            | a < 32768 = m{mem = mem // [(a, b)]}
+            | a < 32776 = m{reg = reg // [(a - 32768, b)]}
+            | otherwise = error "numbers 32776..65535 are invalid"
+
+        read a | a < 32768 = mem ! a
+               | a < 32776 = mem ! (reg ! (a - 32768))
+               | otherwise = error "numbers 32776..65535 are invalid"
 
         debug :: String -> a -> a
         debug string expr
