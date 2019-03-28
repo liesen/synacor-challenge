@@ -180,10 +180,8 @@ step m@Machine{..} =
             let [a] = take 1 args
             b <- getChar
             debugOp [a] $ return $
-                if b == '\n'
-                    then debug "continuing" $ Just (m{pc = pc + 2, debugFlag = False})
-                    else case x a of
-                             Reg a -> Just (m{reg = reg // [(a, fromIntegral (ord b))], pc = pc + 2, debugFlag = True})
+                case x a of
+                    Reg a -> Just (m{reg = reg // [(a, fromIntegral (ord b))], pc = pc + 2})
         Noop -> debugOp [] $ return $ Just (m{pc = pc + 1})
     where
         opcode = mem ! pc
