@@ -80,7 +80,7 @@ step m@Machine{..} =
         -- pop: 3 a
         --   remove the top element from the stack and write it into <a>; empty stack = error
         Pop ->
-            let a = r (mem ! (pc + 1))
+            let [a] = take 1 args
                 s:ss = stack
             in return $ debug (intercalate " " ["pop", show a]) $ Just (m{stack = ss, reg = reg // [(a, s)], pc = pc + 2})
         -- eq: 4 a b c
