@@ -60,8 +60,6 @@ instance Show Val where
     show (Lit x) = "!" ++ show x
     show (Reg x) = "@" ++ show x
 
-type Challenge a = StateT Machine IO a
-
 step :: Machine -> IO (Maybe Machine)
 step m@Machine{..} =
     debugShow m $ case op of
